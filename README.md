@@ -57,6 +57,8 @@ It might be useful to look at [eWay-CRM Database Schema](https://dev.eway-crm.co
 
 Also see [FolderNames](FolderNames.md) for list of supported modules in eWay-CRM.
 
+See [Project Team](ProjectTeam.md) for methods managing a project's team members, their roles and the project manager.
+
 ## Libraries
 
 Depending on the technology you use you can pick one of our libraries.
