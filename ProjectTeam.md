@@ -34,7 +34,7 @@ or take them off it, the role calls only add or take away roles.
 | `GetProjectTeamMembers` | `sessionId`, `projectGuid` | `DataResponse<TeamMember>` | List the project's team members with their roles. |
 | `GetTeamRoles` | `sessionId` | `DataResponse<TeamRoleInfo>` | List all assignable roles. |
 | `AddProjectTeamMembers` | `sessionId`, `projectGuid`, `userGuids: Guid[]` | `ResponseBase` | Put one or more users on the team **without any role**. |
-| `RemoveProjectTeamMembers` | `sessionId`, `projectGuid`, `userGuids: Guid[]` | `ResponseBase` | Remove one or more users from the team. |
+| `RemoveProjectTeamMembers` | `sessionId`, `projectGuid`, `userGuids: Guid[]` | `ResponseBase` | Remove one or more users from the team. The current project manager is rejected. |
 | `AddProjectTeamMemberRoles` | `sessionId`, `projectGuid`, `members: ProjectTeamMemberAssignment[]` | `ResponseBase` | Give members the listed roles **on top of** the ones they already hold (and put them on the team if they are not there yet). |
 | `RemoveProjectTeamMemberRoles` | `sessionId`, `projectGuid`, `members: ProjectTeamMemberAssignment[]` | `ResponseBase` | Take the listed roles away, keeping membership and the remaining roles. |
 | `SetProjectManager` | `sessionId`, `projectGuid`, `userGuid` | `ResponseBase` | Set the project manager (dedicated action). |
@@ -102,6 +102,12 @@ or take them off it, the role calls only add or take away roles.
   role, it does not replace what the member already holds.
 - **Removing a member** cleans everything up (the `TEAM` relation, all their role records and the
   supervisor link if present).
+- **The project manager cannot be removed from the team.** A project is expected to have a manager —
+  its Supervisor field is mandatory, and the project manager is that field projected onto the team —
+  so `RemoveProjectTeamMembers` rejects the request when the current PM is among `userGuids`, and
+  rejects it **whole**, meaning the other users in the same request are not removed either. Hand the
+  role over with `SetProjectManager` first: that demotes the previous manager but keeps them a team
+  member, and they can be removed afterwards.
 
 ## Examples
 
@@ -193,7 +199,8 @@ same way as for the other API endpoints. Typical causes:
 - missing or zero `projectGuid`, `userGuid`, or a zero guid inside `userGuids` / `RoleGuids`,
 - an empty `userGuids` / `members` array, or a member entry with empty `RoleGuids`,
 - a `RoleGuids` entry that is not an existing role,
-- the PM role passed to `AddProjectTeamMemberRoles` or `RemoveProjectTeamMemberRoles`.
+- the PM role passed to `AddProjectTeamMemberRoles` or `RemoveProjectTeamMemberRoles`,
+- the current project manager passed to `RemoveProjectTeamMembers`.
 
 Adding an already-member user, granting a role a member already holds, removing a non-member and
 removing a role a member does not hold are **not** errors (all are silently ignored).
