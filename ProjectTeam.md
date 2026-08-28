@@ -100,6 +100,11 @@ or take them off it, the role calls only add or take away roles.
   cannot leave the team with a broken project manager.
 - **Becoming the project manager keeps the member's other roles.** `SetProjectManager` adds the PM
   role, it does not replace what the member already holds.
+- **A newly created project already has a team.** Saving a project through the API puts its supervisor
+  on the team as the project manager, so there is no need to call `SetProjectManager` after creating a
+  project - set the supervisor (the `Users_SupervisorGuid` foreign key on the project) and the team is
+  there. When the project is saved without a supervisor, the caller becomes the project manager.
+  Saving the project again never changes the team that already exists.
 - **Removing a member** cleans everything up (the `TEAM` relation, all their role records and the
   supervisor link if present).
 - **The project manager cannot be removed from the team.** A project is expected to have a manager —
@@ -108,6 +113,21 @@ or take them off it, the role calls only add or take away roles.
   rejects it **whole**, meaning the other users in the same request are not removed either. Hand the
   role over with `SetProjectManager` first: that demotes the previous manager but keeps them a team
   member, and they can be removed afterwards.
+
+## When the Team Roles module is not available
+
+Roles live in the **Team Roles** module, which needs the Projects feature in the Basic edition or
+higher, and needs to be visible to the signed-in user. When either is missing, roles do not exist for
+this API at all:
+
+- `GetTeamRoles` returns an **empty array**.
+- `GetProjectTeamMembers` still lists the team, but every member comes back with `Roles: []` and
+  `IsProjectManager: false`.
+- `AddProjectTeamMemberRoles`, `RemoveProjectTeamMemberRoles` and `SetProjectManager` are **rejected**
+  with an error saying the module is not accessible - they never report success without doing anything.
+- The membership calls (`AddProjectTeamMembers`, `RemoveProjectTeamMembers`) keep working: team
+  membership itself does not need the module. A project created in this state therefore has its
+  supervisor on the team as a plain member, without the project manager role.
 
 ## Examples
 
@@ -200,7 +220,8 @@ same way as for the other API endpoints. Typical causes:
 - an empty `userGuids` / `members` array, or a member entry with empty `RoleGuids`,
 - a `RoleGuids` entry that is not an existing role,
 - the PM role passed to `AddProjectTeamMemberRoles` or `RemoveProjectTeamMemberRoles`,
-- the current project manager passed to `RemoveProjectTeamMembers`.
+- the current project manager passed to `RemoveProjectTeamMembers`,
+- the Team Roles module not being available for a role call or for `SetProjectManager` (see above).
 
 Adding an already-member user, granting a role a member already holds, removing a non-member and
 removing a role a member does not hold are **not** errors (all are silently ignored).
