@@ -1,5 +1,9 @@
 # Breaking Changes
 
+## 10.1
+
+Procedure `eWaySP_SendMail` raises error when legacy `@format` parameter is provided, you should remove it from the procedure calls.
+
 ## 9.3
 
 ### Renamed database objects
